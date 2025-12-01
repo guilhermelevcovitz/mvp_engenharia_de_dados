@@ -95,14 +95,14 @@ Diagrama simplificado:
 
 ### 4.2 Tabelas
 
-**Fato — fact_title_rating**  
+**Fato — `fact_title_rating`**  
 Contém avaliações e métricas agregáveis:
 - tconst  
 - averageRating  
 - numVotes  
 - year_key  
 
-**Dimensão — dim_title**  
+**Dimensão — `dim_title`**  
 Atributos descritivos:
 - tconst  
 - primaryTitle  
@@ -112,12 +112,12 @@ Atributos descritivos:
 - is_adult  
 - year  
 
-**Dimensão — dim_genre**  
+**Dimensão — `dim_genre`**  
 Estrutura normalizada com um gênero por linha:
 - tconst  
 - genre  
 
-**Dimensão — dim_date**  
+**Dimensão — `dim_date`**  
 Informações temporais:
 - year  
 - decade  
