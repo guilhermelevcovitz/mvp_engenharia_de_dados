@@ -142,10 +142,7 @@ Notebook: `02_transform_imdb`
 - Conversão de tipos (string → integer, string → array).
 - Limpeza de registros com valores ausentes críticos.
 - Separação dos gêneros em arrays e explosão para múltiplas linhas.
-- Junção entre `title.basics` e `title.ratings`, documentando:
-  - chave usada (`tconst`)
-  - granularidade resultante
-  - colunas mantidas e colunas descartadas
+- Junção entre `title.basics` e `title.ratings`.
 - Criação de colunas derivadas:
   - `year_key` (chave temporal)
   - `decade`
