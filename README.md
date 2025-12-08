@@ -32,6 +32,9 @@ Processos executados:
 
 Local:/Volumes/workspace/default/imdb_bronze/
 
+<img width="471" height="220" alt="Capturar" src="https://github.com/user-attachments/assets/3fe49eb1-c495-409b-b3b2-2a154378e99d" />
+
+<img width="492" height="218" alt="Capturar2" src="https://github.com/user-attachments/assets/4fab3690-30da-4935-9945-c3d91d34b1f1" />
 
 ### 3.2 Camada Silver 
 A camada Silver contém dados tratados e padronizados, prontos para modelagem.  
@@ -160,16 +163,245 @@ Notebook: `03_modeling_imdb`
 - Escrita das tabelas no formato Delta.
 - Registro das tabelas no catálogo Unity Catalog para consulta SQL.
 
-## 6. Análise dos Dados
+## 6. Qualidade dos Dados
+
+Antes da realização das análises exploratórias e de negócio, foi conduzida uma etapa de verificação da qualidade dos dados com o objetivo de garantir a confiabilidade dos resultados extraídos do Data Warehouse. Esta etapa teve como foco a validação da consistência das tabelas, a identificação de valores ausentes, a verificação de domínios esperados, a análise de integridade referencial entre as tabelas do modelo estrela e a detecção de registros com datas inconsistentes.
+
+As verificações realizadas permitem assegurar que os dados utilizados nas análises apresentam estrutura adequada, relações corretas entre dimensões e fatos, além de estarem livres de anomalias que poderiam comprometer a interpretação dos resultados.
+
+### 6.1 Volume de registros por tabela
+
+| Tabela             | Quantidade de Registros |
+|--------------------|--------------------------|
+| fact_title_rating  | 2.341.369                |
+| dim_title          | 2.341.369                |
+| dim_genre          | 3.871.466                |
+| dim_date           | 153                      |
+
+### 6.2 Schema e tipos de dados
+
+Nesta etapa foi realizada a verificação dos esquemas das tabelas do Data Warehouse, com o objetivo de validar os tipos de dados, os atributos existentes e a aderência ao modelo dimensional proposto.
+
+#### Tabela: fact_title_rating
+
+| Coluna        | Tipo    | Nulo |
+|---------------|----------|------|
+| tconst        | string   | Sim  |
+| averageRating| double   | Sim  |
+| numVotes      | long     | Sim  |
+| year_key      | integer  | Sim  |
+| titleType     | string   | Sim  |
+
+#### Tabela: dim_title
+
+| Coluna         | Tipo     | Nulo |
+|----------------|-----------|------|
+| tconst         | string    | Sim  |
+| titleType      | string    | Sim  |
+| primaryTitle   | string    | Sim  |
+| originalTitle  | string    | Sim  |
+| is_adult       | boolean   | Sim  |
+| runtimeMinutes | integer   | Sim  |
+| year           | integer   | Sim  |
+
+#### Tabela: dim_genre
+
+| Coluna | Tipo   | Nulo |
+|--------|--------|------|
+| tconst | string | Sim  |
+| genre  | string | Sim  |
+
+#### Tabela: dim_date
+
+| Coluna  | Tipo    | Nulo |
+|---------|----------|------|
+| year    | integer  | Sim  |
+| decade | integer  | Sim  |
+
+A inspeção dos esquemas confirma que os tipos de dados estão compatíveis com os respectivos domínios esperados, permitindo a correta execução das transformações, junções e análises analíticas ao longo do projeto.
+
+### 6.3 Análise de valores nulos por tabela
+
+A análise de valores nulos foi realizada para identificar possíveis lacunas de informação que possam impactar as análises posteriores.
+
+#### Tabela: fact_title_rating
+
+| Coluna         | Registros Nulos | Percentual |
+|----------------|------------------|------------|
+| tconst         | 0                | 0,00%      |
+| averageRating | 1.643.814        | 70,21%     |
+| numVotes       | 1.643.814        | 70,21%     |
+| year_key       | 184.242          | 7,87%      |
+| titleType      | 0                | 0,00%      |
+
+#### Tabela: dim_title
+
+| Coluna          | Registros Nulos | Percentual |
+|------------------|------------------|------------|
+| tconst           | 0                | 0,00%      |
+| titleType        | 0                | 0,00%      |
+| primaryTitle     | 0                | 0,00%      |
+| originalTitle    | 0                | 0,00%      |
+| is_adult         | 0                | 0,00%      |
+| runtimeMinutes   | 937.871          | 40,06%     |
+| year             | 184.242          | 7,87%      |
+
+#### Tabela: dim_genre
+
+| Coluna | Registros Nulos | Percentual |
+|--------|------------------|------------|
+| tconst | 0                | 0,00%      |
+| genre  | 0                | 0,00%      |
+
+#### Tabela: dim_date
+
+| Coluna | Registros Nulos | Percentual |
+|--------|------------------|------------|
+| year   | 0                | 0,00%      |
+| decade | 0                | 0,00%      |
+
+Observa-se elevado percentual de valores nulos em `averageRating` e `numVotes`, indicando que grande parte dos títulos não possui avaliações registradas no IMDb, o que é esperado para produções com baixa visibilidade ou muito recentes.  
+
+A coluna `runtimeMinutes` também apresenta volume significativo de valores ausentes, especialmente em conteúdos como curtas, séries ou registros incompletos.  
+
+Os valores nulos em `year` e `year_key` correspondem a títulos sem ano de lançamento informado na base original. Para evitar impactos nas análises temporais, esses registros foram excluídos das consultas por ano e década por meio de filtros específicos.  
+
+As tabelas `dim_genre` e `dim_date` não apresentam valores nulos, indicando completa consistência estrutural nessas dimensões.
+
+### 6.4 Análise de domínios dos dados numéricos
+
+Nesta etapa foram analisados os valores mínimos e máximos dos principais atributos numéricos para validação de coerência com o domínio do problema.
+
+#### Métricas de avaliação (fact_title_rating)
+
+| Métrica      | Valor |
+|---------------|--------|
+| Nota mínima   | 1,0    |
+| Nota máxima   | 10,0   |
+| Votos mínimos| 5      |
+| Votos máximos| 3.127.637 |
+
+Esses valores estão totalmente coerentes com o padrão do IMDb, no qual as avaliações variam de 1 a 10 e o número de votos pode atingir milhões em títulos de altíssima popularidade.
+
+#### Atributos de duração e ano (dim_title)
+
+| Métrica                | Valor |
+|-------------------------|--------|
+| Duração mínima (min)   | 0      |
+| Duração máxima (min)   | 3.692.080 |
+| Ano mínimo              | 1874   |
+| Ano máximo              | 2115   |
+
+A presença de duração igual a 0 indica registros sem informação válida de tempo. A duração máxima extremamente elevada caracteriza um **outlier evidente**, típico de erros de registro ou agregações indevidas no dado original.  
+
+O intervalo de anos inicia-se em 1874, compatível com os primórdios do cinema. Já valores superiores ao ano atual (2115) representam **anos futuros inconsistentes**, tratados posteriormente com filtros nas análises temporais.
+
+#### Atributos temporais consolidados (dim_date)
+
+| Métrica        | Valor |
+|----------------|--------|
+| Ano mínimo     | 1874   |
+| Ano máximo     | 2115   |
+| Década mínima | 1870   |
+| Década máxima | 2110   |
+
+A dimensão temporal reflete diretamente os valores observados nos títulos. Os registros com anos futuros foram mantidos fisicamente na base para rastreabilidade, porém desconsiderados nas análises por meio de filtros (`year <= year(current_date())`).
+
+**Interpretação geral:**
+
+Os domínios dos dados numéricos são, em sua maioria, coerentes com o contexto do problema. As exceções identificadas referem-se a valores extremos de duração e a anos futuros, que não comprometem os resultados devido ao tratamento aplicado nas consultas analíticas.
+
+### 6.5 Análise de distribuição dos dados (quartis)
+
+Nesta etapa foi analisada a distribuição dos principais atributos numéricos por meio dos quartis, com o objetivo de compreender a concentração dos dados e identificar possíveis assimetrias.
+
+#### Distribuição do número de votos (fact_title_rating)
+
+| Percentil | Número de Votos |
+|-----------|------------------|
+| 25% (P25) | 14               |
+| 50% (Mediana) | 34           |
+| 75% (P75) | 156              |
+
+Observa-se que a maioria dos títulos possui baixo volume de votos, com 75% dos registros apresentando até 156 votos. Isso indica uma forte concentração de votos em um pequeno subconjunto de títulos muito populares, caracterizando um efeito de cauda longa.
+
+---
+
+#### Distribuição da duração dos títulos (dim_title)
+
+| Percentil | Duração (min) |
+|-----------|----------------|
+| 25% (P25) | 10             |
+| 50% (Mediana) | 29         |
+| 75% (P75) | 81             |
+
+Nota-se que 75% dos títulos possuem duração inferior a 81 minutos, o que reforça a predominância de curtas, episódios de séries e conteúdos de menor duração na base, em contraste com a minoria de títulos muito longos.
+
+### 6.6 Análise de duplicidade de registros
+
+Nesta etapa foi verificada a existência de registros duplicados nas chaves primárias e compostas das tabelas do Data Warehouse, como forma de garantir a unicidade dos dados.
+
+| Tabela              | Chave Avaliada        | Registros Duplicados |
+|---------------------|------------------------|-----------------------|
+| fact_title_rating   | tconst                | 0                     |
+| dim_title           | tconst                | 0                     |
+| dim_genre           | (tconst, genre)       | 0                     |
+| dim_date            | year                  | 0                     |
+
+Os resultados indicam que não há registros duplicados nas chaves avaliadas, garantindo a integridade das chaves primárias e compostas do modelo dimensional e assegurando a consistência das junções entre as tabelas.
+
+### 6.7 Análise de integridade referencial
+
+Nesta etapa foi validada a consistência das chaves estrangeiras entre as tabelas do modelo dimensional, assegurando que todos os relacionamentos estejam devidamente representados.
+
+#### Relação: fact_title_rating.tconst → dim_title.tconst
+
+| Métrica                                      | Valor     |
+|----------------------------------------------|-----------|
+| Total de linhas na tabela com FK             | 2.341.369 |
+| Linhas com FK nula                           | 0         |
+| Linhas sem correspondência (inclui nulos)   | 0         |
+| Linhas sem correspondência (FK não nula)    | 0         |
+
+Todos os registros da tabela fato possuem correspondência na dimensão de títulos, indicando integridade referencial completa nesse relacionamento.
+
+#### Relação: fact_title_rating.year_key → dim_date.year
+
+| Métrica                                      | Valor     |
+|----------------------------------------------|-----------|
+| Total de linhas na tabela com FK             | 2.341.369 |
+| Linhas com FK nula                           | 184.242   |
+| Linhas sem correspondência (inclui nulos)   | 184.242   |
+| Linhas sem correspondência (FK não nula)    | 0         |
+
+Os registros sem correspondência estão integralmente associados a valores nulos de `year_key`. Não existem chaves não nulas sem correspondência na dimensão temporal. Esses registros foram desconsiderados nas análises temporais por meio de filtros específicos.
+
+#### Relação: dim_genre.tconst → dim_title.tconst
+
+| Métrica                                      | Valor     |
+|----------------------------------------------|-----------|
+| Total de linhas na tabela com FK             | 3.871.466 |
+| Linhas com FK nula                           | 0         |
+| Linhas sem correspondência (inclui nulos)   | 0         |
+| Linhas sem correspondência (FK não nula)    | 0         |
+
+Todos os registros da dimensão de gêneros possuem correspondência válida na dimensão de títulos, garantindo a consistência do relacionamento entre essas tabelas.
+
+**Resumo da integridade referencial:**
+
+Não foram identificados problemas de integridade referencial entre as tabelas do modelo estrela. As únicas ocorrências de não correspondência estão associadas a valores nulos de `year_key` na tabela fato, que não caracterizam violação de integridade e foram devidamente tratadas nas análises por meio de filtros.
+
+
+## 7. Análise dos Dados
 As análises foram realizadas no notebook `04_analysis_imdb` utilizando SQL e PySpark.  
 
-### 6.1 Evolução do volume de lançamentos por ano
+### 7.1 Evolução do volume de lançamentos por ano
 
 <img width="1341" height="480" alt="visualization" src="https://github.com/user-attachments/assets/fe628283-2b46-42da-89e0-666007833980" />
 
 Observa-se crescimento contínuo no número de títulos lançados entre 1940 e o final da década de 1990, seguido por uma forte aceleração a partir dos anos 2000. O período entre 2005 e 2018 concentra a maior expansão, impulsionada pela digitalização da produção audiovisual e pela consolidação das plataformas de streaming. A partir de 2019 ocorre uma queda gradual no volume de lançamentos, possivelmente associada principalmente aos impactos da pandemia de COVID-19.
 
-### 6.2 Títulos mais votados por década (a partir de 2000)
+### 7.2 Títulos mais votados por década (a partir de 2000)
 
 | Década | Título                                       | Número de Votos |
 |--------|----------------------------------------------|------------------|
@@ -184,7 +416,7 @@ Observa-se crescimento contínuo no número de títulos lançados entre 1940 e o
 | 2020   | Oppenheimer                                 | 960.504          |
 
 
-### 6.3 Popularidade por gênero (volume total de votos)
+### 7.3 Popularidade por gênero (volume total de votos)
 
 A popularidade foi medida pelo volume total de votos por gênero, refletindo o engajamento do público com cada categoria.
 
@@ -210,7 +442,7 @@ A popularidade foi medida pelo volume total de votos por gênero, refletindo o e
 
 Observa-se que gêneros tradicionais do cinema comercial, como *Drama*, *Action* e *Comedy*, concentram a maior parte do engajamento do público. Em contrapartida, gêneros televisivos e de menor apelo comercial apresentam baixa participação no volume total de votos.
 
-### 6.4 Avaliação média por gênero
+### 7.4 Avaliação média por gênero
 
 Esta análise considera a nota média dos títulos dentro de cada gênero, independentemente do volume de votos.
 
@@ -235,7 +467,7 @@ Esta análise considera a nota média dos títulos dentro de cada gênero, indep
 
 Observa-se que gêneros informativos e biográficos apresentam as maiores avaliações médias, enquanto gêneros de forte apelo comercial, como *Horror* e *Adult*, concentram as menores médias. Nota-se também que popularidade (votos) e qualidade percebida (nota média) não apresentam, necessariamente, correlação direta.
 
-### 6.5 Relação entre duração e avaliação média
+### 7.5 Relação entre duração e avaliação média
 
 | Faixa de Duração (min) | Quantidade de Títulos | Avaliação Média |
 |------------------------|------------------------|------------------|
@@ -248,7 +480,7 @@ Observa-se que gêneros informativos e biográficos apresentam as maiores avalia
 
 A análise estatística mostra uma correlação praticamente nula entre a duração dos títulos e a nota média (correlação ≈ 0,00006), indicando que, de forma geral, o tempo de duração não exerce influência relevante sobre a avaliação do público.
 
-### 6.6 Avaliação média por tipo de título
+### 7.6 Avaliação média por tipo de título
 
 | Tipo de Título | Avaliação Média | Quantidade de Títulos |
 |----------------|------------------|------------------------|
@@ -260,7 +492,7 @@ A análise estatística mostra uma correlação praticamente nula entre a duraç
 
 Observa-se que minisséries e séries de TV apresentam as maiores avaliações médias, indicando maior percepção de qualidade nesse formato. Filmes para TV e filmes de cinema apresentam médias inferiores, possivelmente associadas à maior heterogeneidade de produções e ao elevado volume de títulos lançados nesses formatos.
 
-### 6.7 Evolução da avaliação média ao longo das décadas (a partir de 1940)
+### 7.7 Evolução da avaliação média ao longo das décadas (a partir de 1940)
 
 <img width="1341" height="480" alt="visualization (2)" src="https://github.com/user-attachments/assets/6ffcfb3a-892f-45bd-91b7-b1f603d5610d" />
 
@@ -268,7 +500,7 @@ A partir da década de 1940, as avaliações médias apresentam comportamento pr
 
 A partir dos anos 2000, verifica-se crescimento contínuo da avaliação média, com destaque para as décadas de 2010 e 2020, que atingem os maiores valores da série (acima de 6,6). Esse movimento sugere uma tendência recente de aumento da percepção de qualidade das produções, possivelmente associada à maior profissionalização do setor e à consolidação das plataformas de streaming.
 
-### 6.8 Evolução do volume de lançamentos por gênero ao longo das décadas
+### 7.8 Evolução do volume de lançamentos por gênero ao longo das décadas
 
 <img width="1258" height="480" alt="visualization (3)" src="https://github.com/user-attachments/assets/627c8d58-f55c-47b9-9342-fced16eed439" />
 
@@ -276,17 +508,16 @@ A distribuição de títulos por gênero mostra crescimento contínuo desde 1940
 
 A década de 2020 mostra retração em vários gêneros, atribuída ao período ainda incompleto e aos efeitos da pandemia na produção audiovisual. Apesar disso, o padrão histórico reforça que o aumento da capacidade de produção e distribuição transformou o perfil da indústria, ampliando a oferta em praticamente todas as categorias.
 
-
-
-## 7. Qualidade dos Dados
-Foi conduzida uma avaliação da qualidade dos dados em todas as colunas do modelo, observando:
-
-- Distribuição de valores nulos.
-- Verificação de intervalos válidos para ratings, votos, duração e anos.
-- Padronização de categorias de gênero e tipo de título.
-- Consistência de chaves entre fato e dimensões.
-- Duplicatas e integridade referencial.
+## 8. Autoavaliação
 
 ## 8. Autoavaliação
-xxxxxxxxxxxxx
 
+O objetivo principal deste trabalho foi construir um pipeline completo de dados na nuvem, desde a coleta até a análise, utilizando dados públicos do IMDb e a plataforma Databricks. De modo geral, os objetivos propostos foram atingidos de forma satisfatória. Foi possível coletar, modelar, carregar e analisar os dados, bem como responder às principais perguntas definidas no início do projeto por meio de consultas analíticas e visualizações.
+
+A etapa de modelagem permitiu a construção de um modelo dimensional em esquema estrela, garantindo organização e eficiência nas consultas. A carga dos dados foi realizada por meio de pipelines no Databricks, possibilitando a consolidação das camadas Bronze, Silver e Gold. A análise de qualidade dos dados foi fundamental para identificar valores nulos, domínios inconsistentes e garantir a integridade referencial entre as tabelas, assegurando maior confiabilidade nos resultados analíticos.
+
+Entre as principais dificuldades enfrentadas, destacam-se a configuração inicial do ambiente no Databricks, a organização dos arquivos no DBFS e a necessidade de ajustes nos dados temporais devido à presença de anos futuros e valores ausentes. Além disso, a elevada quantidade de dados exigiu cuidados adicionais com performance nas consultas e na execução das transformações.
+
+Como trabalhos futuros, sugere-se a incorporação de novas fontes de dados, como informações sobre elenco e diretores, permitindo análises mais avançadas sobre influência de equipes nas avaliações. Também seria possível evoluir o projeto com a criação de dashboards interativos, aplicação de técnicas de machine learning para previsão de avaliações e automatização completa das pipelines de atualização dos dados.
+
+De forma geral, o projeto contribuiu significativamente para a consolidação prática dos conceitos de engenharia de dados, modelagem dimensional e análise de BI em ambiente de nuvem.
