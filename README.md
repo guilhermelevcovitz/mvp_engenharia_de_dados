@@ -325,8 +325,6 @@ Nesta etapa foi analisada a distribuição dos principais atributos numéricos p
 
 Observa-se que a maioria dos títulos possui baixo volume de votos, com 75% dos registros apresentando até 156 votos. Isso indica uma forte concentração de votos em um pequeno subconjunto de títulos muito populares, caracterizando um efeito de cauda longa.
 
----
-
 #### Distribuição da duração dos títulos (dim_title)
 
 | Percentil | Duração (min) |
@@ -507,8 +505,6 @@ A partir dos anos 2000, verifica-se crescimento contínuo da avaliação média,
 A distribuição de títulos por gênero mostra crescimento contínuo desde 1940, com aceleração expressiva a partir dos anos 2000. Gêneros como *Short*, *Drama*, *Documentary* e *Comedy* apresentam os maiores volumes absolutos, refletindo sua ampla produção global. Na década de 2010, observa-se um pico significativo em praticamente todos os gêneros, impulsionado pela expansão de plataformas digitais, redução de barreiras de produção e diversificação de formatos.
 
 A década de 2020 mostra retração em vários gêneros, atribuída ao período ainda incompleto e aos efeitos da pandemia na produção audiovisual. Apesar disso, o padrão histórico reforça que o aumento da capacidade de produção e distribuição transformou o perfil da indústria, ampliando a oferta em praticamente todas as categorias.
-
-## 8. Autoavaliação
 
 ## 8. Autoavaliação
 
